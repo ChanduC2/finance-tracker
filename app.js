@@ -55,10 +55,36 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
+// --- Safe Storage Fallback Wrapper ---
+const storage = {
+  memoryStore: {},
+  getItem(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      return this.memoryStore[key] || null;
+    }
+  },
+  setItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      this.memoryStore[key] = String(value);
+    }
+  },
+  removeItem(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      delete this.memoryStore[key];
+    }
+  }
+};
+
 // --- Profile List Load / Save ---
 function loadProfiles() {
-  const localList = localStorage.getItem('apex_profiles_list');
-  const activeId = localStorage.getItem('apex_active_profile_id');
+  const localList = storage.getItem('apex_profiles_list');
+  const activeId = storage.getItem('apex_active_profile_id');
   
   if (localList && activeId) {
     try {
@@ -71,11 +97,11 @@ function loadProfiles() {
   } else {
     // Migration check: check if legacy state exists
     setupDefaultProfiles();
-    const legacyData = localStorage.getItem('apex_finance_state');
+    const legacyData = storage.getItem('apex_finance_state');
     if (legacyData) {
       // Migrate legacy state to default profile key
-      localStorage.setItem(`apex_profile_state_p-default`, legacyData);
-      localStorage.removeItem('apex_finance_state');
+      storage.setItem(`apex_profile_state_p-default`, legacyData);
+      storage.removeItem('apex_finance_state');
     }
   }
 }
@@ -89,14 +115,14 @@ function setupDefaultProfiles() {
 }
 
 function saveProfiles() {
-  localStorage.setItem('apex_profiles_list', JSON.stringify(profilesList));
-  localStorage.setItem('apex_active_profile_id', activeProfileId);
+  storage.setItem('apex_profiles_list', JSON.stringify(profilesList));
+  storage.setItem('apex_active_profile_id', activeProfileId);
 }
 
 // --- Active Profile State Management ---
 function loadActiveProfileState() {
   const key = `apex_profile_state_${activeProfileId}`;
-  const localData = localStorage.getItem(key);
+  const localData = storage.getItem(key);
   if (localData) {
     try {
       state = JSON.parse(localData);
@@ -115,7 +141,7 @@ function loadActiveProfileState() {
 
 function saveActiveProfileState() {
   const key = `apex_profile_state_${activeProfileId}`;
-  localStorage.setItem(key, JSON.stringify(state));
+  storage.setItem(key, JSON.stringify(state));
 }
 
 function resetProfileStateToZero() {
