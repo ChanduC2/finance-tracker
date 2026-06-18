@@ -462,24 +462,11 @@ def admin_dashboard():
     
     # Get statistics
     total_profiles = conn.execute("SELECT COUNT(*) FROM profiles").fetchone()[0]
-    total_transactions = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
-    total_volume = conn.execute("SELECT SUM(amount) FROM transactions").fetchone()[0] or 0.0
     
     # Get all profiles
     profiles_rows = conn.execute("""
-        SELECT p.id, p.name, p.email, p.phone, p.color, (p.pin IS NOT NULL) as has_pin,
-               (SELECT COUNT(*) FROM transactions t WHERE t.profile_id = p.id) as tx_count,
-               (SELECT SUM(amount) FROM transactions t WHERE t.profile_id = p.id) as total_spent
-        FROM profiles p
-    """).fetchall()
-    
-    # Get recent transactions (last 100)
-    tx_rows = conn.execute("""
-        SELECT t.id, t.profile_id, p.name as profile_name, t.type, t.category, t.amount, t.date, t.desc
-        FROM transactions t
-        JOIN profiles p ON t.profile_id = p.id
-        ORDER BY t.date DESC, t.id DESC
-        LIMIT 100
+        SELECT id, name, email, phone, color, (pin IS NOT NULL) as has_pin
+        FROM profiles
     """).fetchall()
     
     conn.close()
@@ -518,7 +505,7 @@ def admin_dashboard():
                 padding: 40px 20px;
             }
             .container {
-                max-width: 1200px;
+                max-width: 1000px;
                 margin: 0 auto;
             }
             header {
@@ -564,8 +551,7 @@ def admin_dashboard():
             }
             .stats-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 20px;
+                grid-template-columns: 1fr;
                 margin-bottom: 40px;
             }
             .stat-card {
@@ -573,16 +559,18 @@ def admin_dashboard():
                 border: 1px solid var(--border-color);
                 border-radius: 12px;
                 padding: 24px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
             }
             .stat-card .label {
-                font-size: 14px;
+                font-size: 16px;
                 color: var(--color-text-muted);
                 text-transform: uppercase;
                 letter-spacing: 1px;
-                margin-bottom: 8px;
             }
             .stat-card .value {
-                font-size: 36px;
+                font-size: 48px;
                 font-weight: 800;
             }
             .section-title {
@@ -654,17 +642,6 @@ def admin_dashboard():
                 color: var(--color-danger);
                 border: 1px solid rgba(255, 77, 77, 0.2);
             }
-            .amount-val {
-                font-family: monospace;
-                font-weight: bold;
-                font-size: 16px;
-            }
-            .amount-income {
-                color: var(--color-success);
-            }
-            .amount-expense {
-                color: var(--color-danger);
-            }
             .text-muted {
                 color: var(--color-text-muted);
             }
@@ -688,23 +665,15 @@ def admin_dashboard():
             <header>
                 <div>
                     <h1>Trackora Admin</h1>
-                    <p class="text-muted">Live system & database manager</p>
+                    <p class="text-muted">Live system & user directory</p>
                 </div>
-                <div class="badge-live">Live Database</div>
+                <div class="badge-live">Active System</div>
             </header>
 
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="label">Total Profiles</div>
+                    <div class="label">Total Registered Profiles</div>
                     <div class="value">{{ total_profiles }}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="label">Total Transactions</div>
-                    <div class="value">{{ total_transactions }}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="label">Total System Volume</div>
-                    <div class="value">₹{{ "{:,.2f}".format(total_volume) }}</div>
                 </div>
             </div>
 
@@ -715,12 +684,10 @@ def admin_dashboard():
                         <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>ID</th>
+                                <th>Profile ID</th>
                                 <th>Email</th>
-                                <th>Phone</th>
+                                <th>Phone Number</th>
                                 <th>Security PIN</th>
-                                <th>Transactions</th>
-                                <th>Total Volume</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -742,50 +709,6 @@ def admin_dashboard():
                                     <span class="status-badge status-unsecured">NO PIN</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ p.tx_count }}</td>
-                                <td>₹{{ "{:,.2f}".format(p.total_spent or 0.0) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <h2 class="section-title">Recent System Transactions (Last 100)</h2>
-            <div class="card">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>User</th>
-                                <th>Type</th>
-                                <th>Category</th>
-                                <th>Amount</th>
-                                <th>Description</th>
-                                <th>Transaction ID</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for t in txs %}
-                            <tr>
-                                <td>{{ t.date }}</td>
-                                <td><strong>{{ t.profile_name }}</strong></td>
-                                <td>
-                                    {% if t.type == 'income' %}
-                                    <span class="status-badge status-secured" style="color: var(--color-success)">INCOME</span>
-                                    {% else %}
-                                    <span class="status-badge status-unsecured" style="color: var(--color-danger)">EXPENSE</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ t.category }}</td>
-                                <td>
-                                    <span class="amount-val {% if t.type == 'income' %}amount-income{% else %}amount-expense{% endif %}">
-                                        {% if t.type == 'income' %}+{% else %}-{% endif %}₹{{ "{:,.2f}".format(t.amount) }}
-                                    </span>
-                                </td>
-                                <td class="text-muted">{{ t.desc or '-' }}</td>
-                                <td class="text-muted" style="font-family: monospace; font-size: 13px;">{{ t.id }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -800,10 +723,7 @@ def admin_dashboard():
     return render_template_string(
         html_template, 
         total_profiles=total_profiles, 
-        total_transactions=total_transactions, 
-        total_volume=total_volume,
-        profiles=profiles_rows,
-        txs=tx_rows
+        profiles=profiles_rows
     )
 
 if __name__ == '__main__':
