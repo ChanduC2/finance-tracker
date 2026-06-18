@@ -1,71 +1,68 @@
-# Apex Finance - Web Deployment Guide
+# Trackora - Full-Stack Web Deployment Guide
 
-Because Apex Finance is a static front-end web application (pure HTML, CSS, and JS), you can deploy it to the web and share it with the world for **100% free** in less than 5 minutes.
+## Why GitHub Pages Shows a Network Error
+GitHub Pages is a **static web host**. It only hosts files like HTML, CSS, and client-side JavaScript. It **cannot run server-side code** (like your Python Flask backend `server.py`) or run database engines (like SQLite `database.db`). 
 
-Here are the three easiest ways to launch your application live:
+Because we transitioned Trackora to a secure backend with a database:
+- The website makes `fetch()` requests to API endpoints like `/api/profiles` and `/api/profiles/signin`.
+- When deployed on GitHub Pages, the site tries to find these endpoints on GitHub's static servers, which do not exist, resulting in a **404 Not Found** or **Network Error**.
 
----
-
-## Option 1: Netlify Drop (Easiest & Fastest - No setup required)
-This method takes 10 seconds and does not require git, GitHub, or any commands.
-
-1. Open your web browser and go to [https://app.netlify.com/drop](https://app.netlify.com/drop) (Netlify's drag-and-drop hosting page).
-2. Open your Windows File Explorer and navigate to:
-   `C:\Users\veera\.gemini\antigravity\scratch\`
-3. Drag the **`finance-tracker`** folder and drop it directly onto the circle in the Netlify web page.
-4. Netlify will instantly upload your files and generate a live, secure public URL (e.g. `https://random-words-12345.netlify.app`).
-5. You can register a free account on Netlify to customize the URL name (e.g. `https://my-apex-finance.netlify.app`) or hook up a custom domain.
+To deploy Trackora live on the internet, you must use a **Full-Stack Hosting Platform** that runs Python and supports file persistence for the SQLite database.
 
 ---
 
-## Option 2: GitHub Pages (Best for sharing your code & automatic updates)
-This method hosts the site directly from a GitHub repository. Whenever you update your code on GitHub, your live website updates automatically.
+## Recommended Free Deployment Options
 
-### Step A: Initialize Git locally
-We already have git installed on your machine! Run these commands in your shell to prepare the repo:
-```powershell
-git init
-git add .
-git commit -m "Initial commit - Apex Finance Tracker"
-```
+Here are the two best ways to host your application for free:
 
-### Step B: Upload to GitHub
-1. Go to [GitHub.com](https://github.com/) and create a free account (if you don't have one).
-2. Click **New Repository**.
-   - Name it: `finance-tracker`
-   - Leave it **Public**.
-   - Do **NOT** initialize with a README, gitignore, or license (keep it blank).
-3. Copy the commands under "**…or push an existing repository from the command line**". It will look like this:
-   ```bash
-   git remote add origin https://github.com/YOUR_USERNAME/finance-tracker.git
-   git branch -M main
-   git push -u origin main
-   ```
-4. Run those commands in your terminal inside the `C:\Users\veera\.gemini\antigravity\scratch\finance-tracker` folder.
+### Option 1: Render (Recommended - Free Web Service)
+[Render](https://render.com/) is a cloud platform that makes it very easy to run Python Flask apps.
 
-### Step C: Turn on GitHub Pages
-1. On your GitHub repository page, go to **Settings** (tab at the top).
-2. Click on **Pages** in the left sidebar menu.
-3. Under **Build and deployment**, set the Source dropdown to **Deploy from a branch**.
-4. Under **Branch**, select `main` and `/ (root)` folder, then click **Save**.
-5. Wait 1-2 minutes. GitHub will deploy your site to:
-   `https://YOUR_USERNAME.github.io/finance-tracker/`
+1. **Create a GitHub Repository**:
+   - Push your code to a repository on GitHub (make sure it includes `server.py`, `app.js`, `index.html`, `index.css`, and `package.json`).
+   - Add a file named `requirements.txt` to the root folder specifying your Python dependencies:
+     ```text
+     Flask==3.0.0
+     gunicorn==21.2.0
+     ```
+
+2. **Sign Up on Render**:
+   - Go to [render.com](https://render.com/) and create a free account linked to your GitHub account.
+
+3. **Create a New Web Service**:
+   - Click **New +** and select **Web Service**.
+   - Connect your GitHub repository.
+   - Configure the Web Service settings:
+     - **Name**: `apex-finance`
+     - **Environment**: `Python 3`
+     - **Build Command**: `pip install -r requirements.txt`
+     - **Start Command**: `gunicorn server:app` (or `python server.py` if running development server, though `gunicorn` is recommended for production)
+     - **Instance Type**: Select the **Free** tier.
+
+4. **Add a Persistent Disk (Crucial for SQLite)**:
+   - Render's free tier has an ephemeral filesystem (data resets when the server sleeps or restarts). To save your SQLite data permanently:
+   - In your Web Service settings on Render, go to the **Disks** tab.
+   - Click **Add Disk**:
+     - **Name**: `db-volume`
+     - **Mount Path**: `/var/data`
+     - **Size**: `1 GB` (free)
+   - Go to the **Environment** tab on Render and add an Environment Variable:
+     - **Key**: `DATABASE_URL` (or update your `server.py` to point the SQLite database path to `/var/data/database.db` if deployed).
 
 ---
 
-## Option 3: Vercel CLI (Best for command-line power users)
-Vercel is a premium hosting platform. You can deploy directly from your command line.
+### Option 2: Railway (Extremely Simple Full-Stack Hosting)
+[Railway](https://railway.app/) is a developer-friendly platform that automatically detects and builds Python Flask apps.
 
-1. Open your terminal in the `C:\Users\veera\.gemini\antigravity\scratch\finance-tracker` directory.
-2. Run:
-   ```bash
-   npx vercel
-   ```
-3. The CLI will ask you to login (or sign up) and answer a few quick questions:
-   - *Set up and deploy?* Yes
-   - *Which scope?* (Select your username)
-   - *Link to existing project?* No
-   - *What's your project's name?* apex-finance
-   - *In which directory is your code located?* `./`
-   - *Want to modify build settings?* No
-4. Vercel will upload and compile your code, providing a live production link instantly (e.g. `https://apex-finance.vercel.app`).
+1. Go to [railway.app](https://railway.app/) and sign up.
+2. Click **New Project** -> **Deploy from GitHub repo**.
+3. Choose your `finance-tracker` repository.
+4. Railway will automatically build and deploy your app.
+5. In your service settings under **Variables**, click **New Variable** to add persistent directories, or add a persistent Volume to secure `database.db`.
+
+---
+
+## Option 3: Reverting to purely local `localStorage` (If you must use GitHub Pages)
+If you specifically want to host the site on GitHub Pages for free without setting up a backend server:
+- You would need to rewrite `app.js` to store all data in the user's browser via `localStorage` (like it did originally) instead of sending API requests to `server.py`.
+- **Note**: Doing this means the data will only exist in that specific browser on that specific device and cannot be synced or shared.

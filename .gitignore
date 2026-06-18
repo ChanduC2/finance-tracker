@@ -31,3 +31,16 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Databases
+*.db
+*.sqlite
+database.db

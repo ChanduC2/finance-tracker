@@ -3,8 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Apex Finance - Premium Budget Tracker</title>
+  <title>Trackora</title>
   <link rel="stylesheet" href="index.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Trackora">
+  <link rel="apple-touch-icon" href="logo.png">
   <script>
     window.addEventListener('error', function(e) {
       alert("Error: " + e.message + "\nFile: " + e.filename + "\nLine: " + e.lineno);
@@ -23,34 +28,116 @@
   <div class="phone-shell">
     <div class="app-container">
       
+      <!-- HTML5 Confetti Canvas -->
+      <canvas id="confetti-canvas"></canvas>
+
+
+
       <!-- SCREEN LOCK OVERLAY -->
       <div id="lock-screen" class="lock-screen-overlay">
-        <div class="lock-logo" id="lock-logo-icon">🔒</div>
-        <h2 id="lock-title">Enter PIN</h2>
-        <span id="lock-status" style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 24px; text-align: center; font-weight: 500;">Enter your 4-digit code to unlock data</span>
         
-        <!-- Indicator dots -->
-        <div class="lock-dots" id="lock-dots-indicator">
-          <span class="lock-dot"></span>
-          <span class="lock-dot"></span>
-          <span class="lock-dot"></span>
-          <span class="lock-dot"></span>
+        <!-- 1. UNIFIED SIGN IN / SIGN UP AUTH VIEW -->
+        <div id="lock-auth-view" class="lock-view">
+          <div class="lock-logo" style="margin-bottom: 16px;">
+            <img src="logo.png" alt="Trackora Logo">
+          </div>
+          <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 4px;">Trackora</h2>
+          <span style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 24px; text-align: center;">A smart place to track and manage your finances.</span>
+          
+          <!-- Auth Tabs Switcher -->
+          <div class="auth-tabs" style="display: flex; gap: 8px; width: 100%; max-width: 280px; margin-bottom: 20px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 4px;">
+            <button type="button" class="auth-tab active" id="tab-signin" onclick="switchAuthTab('signin')" style="flex: 1; padding: 8px; border: none; border-radius: 8px; background: var(--color-primary); color: white; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s ease;">Sign In</button>
+            <button type="button" class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')" style="flex: 1; padding: 8px; border: none; border-radius: 8px; background: transparent; color: var(--color-text-secondary); font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s ease;">Sign Up</button>
+          </div>
+
+          <!-- Sign In Form Panel -->
+          <div id="panel-signin" class="auth-panel" style="width: 100%; max-width: 280px;">
+            <form id="auth-signin-form" style="display: flex; flex-direction: column; gap: 14px;">
+              <input type="text" id="signin-identifier" class="text-input" placeholder="Email or Mobile Number" required style="text-align: center;">
+              <button type="submit" class="submit-btn" style="padding: 14px;">Sign In</button>
+            </form>
+          </div>
+
+          <!-- Sign Up Form Panel -->
+          <div id="panel-signup" class="auth-panel hidden" style="width: 100%; max-width: 280px;">
+            <form id="auth-signup-form" style="display: flex; flex-direction: column; gap: 14px;">
+              <input type="text" id="signup-name" class="text-input" placeholder="Full Name" maxlength="20" required style="text-align: center;">
+              <input type="email" id="signup-email" class="text-input" placeholder="Email Address" required style="text-align: center;">
+              <div class="phone-input-container" style="display: flex; align-items: center; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 14px; padding: 0 16px;">
+                <span style="color: var(--color-text-secondary); font-size: 14px; font-weight: 700; margin-right: 8px;">+91</span>
+                <input type="tel" id="signup-phone" class="text-input" placeholder="Mobile Number" pattern="[0-9]{10}" maxlength="10" required style="border: none; padding: 12px 0; background: transparent; width: 100%; outline: none; color: var(--color-text-primary); font-family: var(--font-family);">
+              </div>
+              <select id="signup-question" class="text-input" required style="text-align: center; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23888%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat: no-repeat; background-position: right 14px center; background-size: 16px;">
+                <option value="" disabled selected>Select Security Question</option>
+                <option value="What was the name of your first pet?">What was the name of your first pet?</option>
+                <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                <option value="What was the name of your first school?">What was the name of your first school?</option>
+                <option value="In what city were you born?">In what city were you born?</option>
+                <option value="What is your favorite movie?">What is your favorite movie?</option>
+              </select>
+              <input type="text" id="signup-answer" class="text-input" placeholder="Security Answer" required style="text-align: center;">
+              <button type="submit" class="submit-btn" style="padding: 14px;">Continue & Setup PIN</button>
+            </form>
+          </div>
+        </div>
+        
+        <!-- 2. PIN KEYPAD VIEW -->
+        <div id="lock-keypad-view" class="lock-view hidden">
+          <div class="lock-logo" id="lock-logo-icon" style="margin-bottom: 24px; color: var(--color-primary);">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 8px var(--color-primary-glow));"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h2 id="lock-title">Enter PIN</h2>
+          <span id="lock-status" style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 24px; text-align: center; font-weight: 500;">Enter your 4-digit code to unlock data</span>
+          
+          <!-- Indicator dots -->
+          <div class="lock-dots" id="lock-dots-indicator">
+            <span class="lock-dot"></span>
+            <span class="lock-dot"></span>
+            <span class="lock-dot"></span>
+            <span class="lock-dot"></span>
+          </div>
+
+          <!-- Glass Keyboard Dialer Grid -->
+          <div class="lock-keypad">
+            <button type="button" class="keypad-btn" onclick="pressLockKey('1')">1</button>
+            <button type="button" class="keypad-btn" onclick="pressLockKey('2')">2</button>
+            <button type="button" class="keypad-btn" onclick="pressLockKey('3')">3</button>
+            <button type="button" class="keypad-btn" onclick="pressLockKey('4')">4</button>
+            <button type="button" class="keypad-btn" onclick="pressLockKey('5')">5</button>
+            <button type="button" class="keypad-btn" onclick="pressLockKey('6')">6</button>
+            <button type="button" class="keypad-btn" onclick="pressLockKey('7')">7</button>
+            <button type="button" class="keypad-btn" onclick="pressLockKey('8')">8</button>
+            <button type="button" class="keypad-btn" onclick="pressLockKey('9')">9</button>
+            <button type="button" class="keypad-btn action" onclick="pressLockKey('clear')">⌫</button>
+            <button type="button" class="keypad-btn" onclick="pressLockKey('0')">0</button>
+            <button type="button" class="keypad-btn action" id="lock-ok-btn" onclick="pressLockKey('ok')">OK</button>
+          </div>
+          
+          <button type="button" id="lock-forgot-btn" class="forgot-pin-link" onclick="showResetPinView()" style="background: transparent; border: none; color: var(--color-text-secondary); font-size: 12px; font-weight: 600; margin-top: 16px; margin-bottom: 8px; cursor: pointer; text-decoration: underline; transition: color 0.2s;">
+            Forgot PIN?
+          </button>
+          
+          <button type="button" class="back-to-profiles-btn" onclick="handleLockBack()">
+            ← Switch Account / Sign Out
+          </button>
         </div>
 
-        <!-- Glass Keyboard Dialer Grid -->
-        <div class="lock-keypad">
-          <button type="button" class="keypad-btn" onclick="pressLockKey('1')">1</button>
-          <button type="button" class="keypad-btn" onclick="pressLockKey('2')">2</button>
-          <button type="button" class="keypad-btn" onclick="pressLockKey('3')">3</button>
-          <button type="button" class="keypad-btn" onclick="pressLockKey('4')">4</button>
-          <button type="button" class="keypad-btn" onclick="pressLockKey('5')">5</button>
-          <button type="button" class="keypad-btn" onclick="pressLockKey('6')">6</button>
-          <button type="button" class="keypad-btn" onclick="pressLockKey('7')">7</button>
-          <button type="button" class="keypad-btn" onclick="pressLockKey('8')">8</button>
-          <button type="button" class="keypad-btn" onclick="pressLockKey('9')">9</button>
-          <button type="button" class="keypad-btn action" onclick="pressLockKey('clear')">⌫</button>
-          <button type="button" class="keypad-btn" onclick="pressLockKey('0')">0</button>
-          <button type="button" class="keypad-btn action" id="lock-ok-btn" onclick="pressLockKey('ok')">OK</button>
+        <!-- 3. IDENTITY VERIFICATION RESET PIN VIEW -->
+        <div id="lock-reset-view" class="lock-view hidden" style="width: 100%; max-width: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div class="lock-logo" style="margin-bottom: 24px; color: var(--color-primary);">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 8px var(--color-primary-glow));"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 4px; text-align: center;">Verify Identity</h2>
+          <span id="lock-reset-question" style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 24px; text-align: center; line-height: 1.4;">Enter your registered Email or Mobile Number to reset your PIN.</span>
+          
+          <form id="lock-reset-form" style="display: flex; flex-direction: column; gap: 14px; width: 100%;">
+            <input type="text" id="reset-answer" class="text-input" placeholder="Email or Mobile Number" required style="text-align: center;">
+            <button type="submit" class="submit-btn" style="padding: 14px;">Verify & Reset</button>
+          </form>
+          
+          <button type="button" class="back-to-profiles-btn" onclick="cancelResetPin()" style="margin-top: 16px;">
+            ← Back to PIN Entry
+          </button>
         </div>
       </div>
 
@@ -73,19 +160,17 @@
         </div>
         
         <div class="header-actions-group">
-          <!-- Theme Picker Pill -->
-          <div class="theme-picker-pill">
-            <span class="theme-dot midnight active" onclick="setAppTheme('midnight')" title="Midnight Theme"></span>
-            <span class="theme-dot cyberpunk" onclick="setAppTheme('cyberpunk')" title="Cyberpunk Theme"></span>
-            <span class="theme-dot emerald" onclick="setAppTheme('emerald')" title="Emerald Theme"></span>
-          </div>
+          <!-- Theme Toggle Button -->
+          <button id="theme-toggle-btn" class="notification-btn" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle Theme">
+            <svg id="theme-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+          </button>
           
-          <button id="noti-btn" class="notification-btn" aria-label="Notifications">
+          <!-- Settings Button -->
+          <button id="settings-btn" class="notification-btn" onclick="openSettingsDrawer()" title="Settings" aria-label="Settings">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
-            <div class="notification-badge"></div>
           </button>
         </div>
       </header>
@@ -95,7 +180,7 @@
         <!-- Balance Card -->
         <div class="glass-card balance-card">
           <div class="balance-title">Net Balance</div>
-          <div id="dashboard-balance" class="balance-value">$0.00</div>
+          <div id="dashboard-balance" class="balance-value">₹0.00</div>
           
           <div class="cash-flow-summary">
             <div class="flow-item">
@@ -107,7 +192,7 @@
               </div>
               <div class="flow-info">
                 <span class="flow-label">Income</span>
-                <span id="dashboard-income" class="flow-amount income-text">$0.00</span>
+                <span id="dashboard-income" class="flow-amount income-text">₹0.00</span>
               </div>
             </div>
             
@@ -120,7 +205,7 @@
               </div>
               <div class="flow-info">
                 <span class="flow-label">Expenses</span>
-                <span id="dashboard-expense" class="flow-amount expense-text">$0.00</span>
+                <span id="dashboard-expense" class="flow-amount expense-text">₹0.00</span>
               </div>
             </div>
           </div>
@@ -168,7 +253,7 @@
               <g id="donut-segments-group"></g>
             </svg>
             <div class="donut-center-text">
-              <span id="donut-total" class="donut-center-val">$0.00</span>
+              <span id="donut-total" class="donut-center-val">₹0.00</span>
               <span class="donut-center-lbl">Total Spent</span>
             </div>
           </div>
@@ -178,11 +263,19 @@
           </div>
         </div>
 
-        <!-- Weekly Activity Card -->
+        <!-- Weekly/Monthly/Yearly Activity Card -->
         <div class="glass-card">
-          <div class="section-header">
-            <h3>Weekly Activity</h3>
-            <span id="weekly-chart-total" style="font-size: 12px; font-weight: 700; color: var(--color-balance);">$0.00</span>
+          <div class="section-header" style="margin-bottom: 6px;">
+            <h3 id="activity-chart-title">Weekly Activity</h3>
+            <div class="chart-time-selector">
+              <button class="chart-tab active" data-range="week" onclick="setChartInterval('week')">Week</button>
+              <button class="chart-tab" data-range="month" onclick="setChartInterval('month')">Months</button>
+              <button class="chart-tab" data-range="year" onclick="setChartInterval('year')">Years</button>
+            </div>
+          </div>
+          <!-- Height-stable container for tooltip to prevent screen jerking -->
+          <div style="height: 18px; margin-bottom: 12px; display: flex; align-items: center;">
+            <span id="weekly-chart-total" style="font-size: 13px; font-weight: 700; color: var(--color-balance); line-height: 1;">₹0.00</span>
           </div>
           <div class="bar-chart-wrapper">
             <svg id="weekly-bar-chart" class="svg-bar-chart" viewBox="0 0 320 140">
@@ -247,6 +340,20 @@
         </div>
       </main>
 
+      <!-- SCREEN 4: THEMES CONFIGURATOR -->
+      <main id="screen-themes" class="app-screen">
+        <div class="section-header">
+          <h3>UI Themes</h3>
+        </div>
+        <p style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 20px; line-height: 1.5;">
+          Personalize your experience by selecting a color theme. This adjusts the accents, card gradients, and background glows.
+        </p>
+
+        <div class="themes-grid" id="themes-grid-container">
+          <!-- Dynamic theme items will go here -->
+        </div>
+      </main>
+
       <!-- BOTTOM NAV BAR -->
       <nav class="bottom-nav">
         <button class="nav-item active" onclick="showScreen('dashboard')" data-tab="dashboard">
@@ -287,6 +394,17 @@
           </svg>
           History
         </button>
+
+        <button class="nav-item" onclick="showScreen('themes')" data-tab="themes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" />
+            <circle cx="7.5" cy="10.5" r="1.5" fill="currentColor" />
+            <circle cx="11.5" cy="7.5" r="1.5" fill="currentColor" />
+            <circle cx="16.5" cy="9.5" r="1.5" fill="currentColor" />
+            <circle cx="15.5" cy="14.5" r="1.5" fill="currentColor" />
+          </svg>
+          Themes
+        </button>
       </nav>
 
       <!-- DRAWER BACKDROP -->
@@ -309,7 +427,7 @@
 
           <!-- Currency Input -->
           <div class="amount-input-wrapper">
-            <span class="amount-currency">$</span>
+            <span class="amount-currency">₹</span>
             <input type="number" id="tx-amount" class="amount-input" placeholder="0.00" step="0.01" required min="0.01">
           </div>
 
@@ -324,27 +442,39 @@
             <label class="form-label">Category</label>
             <div class="category-picker-grid" id="category-picker-grid">
               <div class="cat-picker-item selected" data-cat="Food">
-                <div class="cat-picker-icon" style="background-color: var(--cat-food);">🍔</div>
+                <div class="cat-picker-icon" style="background-color: var(--cat-food);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v4"/><path d="M5 2v4"/><path d="M9 2v4"/><path d="M19 2v14h-3v7h-2v-7H11V2c1.9 0 3.8.7 5 2V2z"/></svg>
+                </div>
                 <div class="cat-picker-name">Food</div>
               </div>
               <div class="cat-picker-item" data-cat="Shopping">
-                <div class="cat-picker-icon" style="background-color: var(--cat-shopping);">🛍️</div>
+                <div class="cat-picker-icon" style="background-color: var(--cat-shopping);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                </div>
                 <div class="cat-picker-name">Shopping</div>
               </div>
               <div class="cat-picker-item" data-cat="Entertainment">
-                <div class="cat-picker-icon" style="background-color: var(--cat-entertainment);">🎬</div>
+                <div class="cat-picker-icon" style="background-color: var(--cat-entertainment);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
+                </div>
                 <div class="cat-picker-name">Fun</div>
               </div>
               <div class="cat-picker-item" data-cat="Transport">
-                <div class="cat-picker-icon" style="background-color: var(--cat-transport);">🚗</div>
+                <div class="cat-picker-icon" style="background-color: var(--cat-transport);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                </div>
                 <div class="cat-picker-name">Transit</div>
               </div>
               <div class="cat-picker-item" data-cat="Utilities">
-                <div class="cat-picker-icon" style="background-color: var(--cat-utilities);">⚡</div>
+                <div class="cat-picker-icon" style="background-color: var(--cat-utilities);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                </div>
                 <div class="cat-picker-name">Bills</div>
               </div>
               <div class="cat-picker-item" data-cat="Other">
-                <div class="cat-picker-icon" style="background-color: var(--cat-other);">📦</div>
+                <div class="cat-picker-icon" style="background-color: var(--cat-other);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                </div>
                 <div class="cat-picker-name">Other</div>
               </div>
             </div>
@@ -368,17 +498,159 @@
           <button id="close-profile-btn" class="drawer-close-btn">&times;</button>
         </div>
 
-        <div style="max-height: 250px; overflow-y: auto; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;" id="profiles-list-container">
+        <div style="max-height: 240px; overflow-y: auto; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 12px; padding-right: 4px;" id="profiles-list-container">
           <!-- Dynamic profile rows are generated here -->
         </div>
 
         <form id="new-profile-form" style="border-top: 1px solid var(--border-color); padding-top: 18px;">
           <label class="form-label">Add New Profile</label>
-          <div style="display: flex; gap: 10px;">
-            <input type="text" id="new-profile-name" class="text-input" placeholder="e.g. John Doe" maxlength="20" required style="flex: 1;">
-            <button type="submit" class="submit-btn" style="width: auto; padding: 12px 20px; flex-shrink: 0;">Create</button>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <input type="text" id="new-profile-name" class="text-input" placeholder="Profile Name" maxlength="20" required>
+            <input type="email" id="new-profile-email" class="text-input" placeholder="Email Address" required>
+            <div class="phone-input-container" style="width: 100%; display: flex; align-items: center; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 14px; padding: 0 16px;">
+              <span style="color: var(--color-text-secondary); font-size: 14px; font-weight: 700; margin-right: 8px;">+91</span>
+              <input type="tel" id="new-profile-phone" class="text-input" placeholder="Mobile Number" pattern="[0-9]{10}" maxlength="10" required style="border: none; padding: 12px 0; background: transparent; width: 100%; outline: none; color: var(--color-text-primary); font-family: var(--font-family);">
+            </div>
+            <select id="new-profile-question" class="text-input" required style="cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23888%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat: no-repeat; background-position: right 14px center; background-size: 16px;">
+              <option value="" disabled selected>Select Security Question</option>
+              <option value="What was the name of your first pet?">What was the name of your first pet?</option>
+              <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+              <option value="What was the name of your first school?">What was the name of your first school?</option>
+              <option value="In what city were you born?">In what city were you born?</option>
+              <option value="What is your favorite movie?">What is your favorite movie?</option>
+            </select>
+            <input type="text" id="new-profile-answer" class="text-input" placeholder="Security Answer" required>
+            <button type="submit" class="submit-btn" style="width: 100%;">Create & Lock Setup</button>
           </div>
         </form>
+      </div>
+
+      <!-- SETTINGS BOTTOM SHEET DRAWER -->
+      <div id="settings-drawer" class="bottom-drawer">
+        <div class="drawer-handle"></div>
+        <div class="drawer-header">
+          <h3>Settings</h3>
+          <button id="close-settings-btn" class="drawer-close-btn" onclick="closeSettingsDrawer()">&times;</button>
+        </div>
+
+        <div class="settings-content-wrapper" style="max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding-bottom: 24px; padding-right: 4px;">
+          <!-- 1. Active Profile Section -->
+          <div class="settings-profile-box" style="display: flex; align-items: center; gap: 14px; padding: 14px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 18px;">
+            <div id="settings-profile-avatar" style="width: 46px; height: 46px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-weight: 800; font-size: 16px; text-shadow: 0 1px 2px rgba(0,0,0,0.3); flex-shrink: 0;">VM</div>
+            <div style="display: flex; flex-direction: column;">
+              <strong id="settings-profile-name" style="font-size: 15px; color: var(--color-text-primary);">Veera M.</strong>
+              <span id="settings-profile-phone" style="font-size: 11px; color: var(--color-text-secondary); margin-top: 2px;">+91 98765 43210</span>
+            </div>
+          </div>
+
+          <!-- 2. Account Security & Profile Options List -->
+          <div class="settings-list-group" style="display: flex; flex-direction: column; gap: 8px;">
+            <span class="form-label" style="font-size: 9px; margin-bottom: 2px;">Account & Profiles</span>
+            
+            <div class="settings-action-item" onclick="handleSettingsSwitchProfile()">
+              <div class="settings-action-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Switch Profile
+              </div>
+              <span style="font-size: 12px; color: var(--color-text-secondary);">Change active user</span>
+            </div>
+
+            <div class="settings-action-item" onclick="handleSettingsPhoneSignIn()">
+              <div class="settings-action-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                Sign In with Phone
+              </div>
+              <span style="font-size: 12px; color: var(--color-text-secondary);">Enter 10-digit mobile</span>
+            </div>
+
+            <div class="settings-action-item danger" onclick="handleSettingsRemoveAccount()" style="border-color: rgba(239, 68, 68, 0.15); background: rgba(239, 68, 68, 0.02);">
+              <div class="settings-action-label" style="color: var(--color-expense);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Remove Profile Account
+              </div>
+              <span style="font-size: 11px; color: var(--color-expense); font-weight: 600;">Erase all user data</span>
+            </div>
+          </div>
+
+          <!-- 3. Preferences Options List -->
+          <div class="settings-list-group" style="display: flex; flex-direction: column; gap: 8px;">
+            <span class="form-label" style="font-size: 9px; margin-bottom: 2px;">Preferences & Data</span>
+            
+            <div class="settings-action-item" onclick="handleSettingsResetData()">
+              <div class="settings-action-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--color-text-secondary);"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Reset Ledger Data
+              </div>
+              <span style="font-size: 12px; color: var(--color-text-secondary);">Clear transaction records</span>
+            </div>
+
+            <div class="settings-action-item" onclick="showScreen('themes'); closeSettingsDrawer();">
+              <div class="settings-action-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--color-text-secondary);"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"/><circle cx="7.5" cy="10.5" r="1.5" fill="currentColor"/><circle cx="11.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="16.5" cy="9.5" r="1.5" fill="currentColor"/><circle cx="15.5" cy="14.5" r="1.5" fill="currentColor"/></svg>
+                Color Themes
+              </div>
+              <span style="font-size: 12px; color: var(--color-text-secondary);">Change active colors</span>
+            </div>
+
+            <div class="settings-action-item" onclick="startAppTour()">
+              <div class="settings-action-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Take App Tour
+              </div>
+              <span style="font-size: 12px; color: var(--color-text-secondary);">Interactive tutorial</span>
+            </div>
+
+            <div class="settings-action-item" style="cursor: default;">
+              <div class="settings-action-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--color-text-secondary);"><path d="M6 3h12"/><path d="M6 8h12"/><path d="M6 3a5 5 0 0 1 5 5H6"/><path d="M6 13h5a5 5 0 0 1 5 5v3"/><path d="m9 13 8 8"/></svg>
+                Local Currency
+              </div>
+              <span style="font-size: 12px; color: var(--color-text-secondary); font-weight: 700;">INR (₹)</span>
+            </div>
+          </div>
+
+          <!-- 4. Session Action -->
+          <button type="button" class="secondary-btn" onclick="handleSettingsSignOut()" style="margin-top: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign Out of Profile
+          </button>
+          
+          <!-- Explicit spacer to prevent browser flex scroll clipping -->
+          <div style="height: 35px; flex-shrink: 0;"></div>
+        </div>
+      </div>
+
+      <!-- CUSTOM CONFIRM MODAL -->
+      <div id="confirm-modal" class="confirm-modal-overlay hidden">
+        <div class="confirm-modal-box">
+          <div class="confirm-modal-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <h3 id="confirm-modal-title">Confirm Action</h3>
+          <p id="confirm-modal-message">Are you sure you want to proceed?</p>
+          <div class="confirm-modal-actions">
+            <button type="button" id="confirm-modal-cancel-btn" class="secondary-btn" style="border: 1px solid var(--border-color); background: transparent; color: var(--color-text-primary);">Cancel</button>
+            <button type="button" id="confirm-modal-ok-btn" class="submit-btn danger" style="background: var(--color-expense); color: white; border: none;">Yes, Proceed</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ONBOARDING TOUR MODAL / TOOLTIP -->
+      <div id="tour-tooltip" class="tour-tooltip-card hidden">
+        <div class="tour-tooltip-header">
+          <span id="tour-step-indicator">Step 1 of 6</span>
+          <button type="button" class="tour-close-btn" onclick="endAppTour()">&times;</button>
+        </div>
+        <p id="tour-tooltip-text">Welcome to Trackora! Let's show you around.</p>
+        <div class="tour-tooltip-footer">
+          <button type="button" class="secondary-btn" id="tour-skip-btn" onclick="endAppTour()" style="border: 1px solid var(--border-color); background: transparent; color: var(--color-text-secondary); padding: 5px 12px; font-size: 11px; border-radius: 8px; font-weight: 700; cursor: pointer;">Skip</button>
+          <button type="button" class="submit-btn" id="tour-next-btn" onclick="nextTourStep()" style="background: var(--color-primary); color: white; border: none; padding: 5px 14px; font-size: 11px; border-radius: 8px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px var(--color-primary-glow);">Next</button>
+        </div>
+      </div>
+
+      <!-- iOS Bottom Home Indicator Swipe Bar -->
+      <div class="home-indicator-bar">
+        <span class="home-line"></span>
       </div>
 
     </div>
