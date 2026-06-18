@@ -449,15 +449,8 @@ def delete_profile(profile_id):
         conn.close()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/admin')
+@app.route('/db')
 def admin_dashboard():
-    # Passcode authentication (default is 'trackora-admin', can be set via env var ADMIN_KEY)
-    secret_key = os.environ.get('ADMIN_KEY', 'trackora-admin')
-    user_key = request.args.get('key')
-    
-    if not user_key or user_key != secret_key:
-        return "<h1>403 Forbidden</h1><p>Invalid or missing access key.</p>", 403
-        
     conn = get_db_connection()
     
     # Get statistics
