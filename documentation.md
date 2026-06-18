@@ -156,7 +156,7 @@ All communication between the frontend client and the backend server happens via
 | **POST** | `/api/profile/<id>/theme` | Saves active light/dark/accent choices |
 | **POST** | `/api/profile/<id>/reset` | Erases all transactions of the profile |
 | **DELETE**| `/api/profile/<id>` | Erases profile and cascades all child tables |
-| **GET** | `/admin?key=YOUR_SECRET` | Renders the HTML active user directory (live dashboard) |
+| **GET** | `/db` | Renders the HTML active user directory (live dashboard) |
 
 ---
 
@@ -234,8 +234,7 @@ PythonAnywhere is recommended because it provides free, persistent file storage,
 
 To view your registered users in real-time, navigate to your dashboard:
 
-* **URL**: `https://YOUR_USERNAME.pythonanywhere.com/admin?key=trackora-admin`
-* **Default Passcode**: `trackora-admin`
+* **URL**: `https://YOUR_USERNAME.pythonanywhere.com/db` (the path itself acts as the passcode)
 
 This dashboard is a **live, read-only directory** showing:
 1. **Total Registered Profiles**: Overall account count.
