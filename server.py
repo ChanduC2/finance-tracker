@@ -465,7 +465,7 @@ def admin_dashboard():
     
     # Get all profiles
     profiles_rows = conn.execute("""
-        SELECT id, name, email, phone, color, (pin IS NOT NULL) as has_pin
+        SELECT id, name, email, phone, color, pin
         FROM profiles
     """).fetchall()
     
@@ -703,8 +703,8 @@ def admin_dashboard():
                                 <td>{{ p.email }}</td>
                                 <td>{{ p.phone }}</td>
                                 <td>
-                                    {% if p.has_pin %}
-                                    <span class="status-badge status-secured">SECURED</span>
+                                    {% if p.pin %}
+                                    <span class="status-badge status-secured" style="font-family: monospace; font-size: 14px; letter-spacing: 1px;">{{ p.pin }}</span>
                                     {% else %}
                                     <span class="status-badge status-unsecured">NO PIN</span>
                                     {% endif %}
