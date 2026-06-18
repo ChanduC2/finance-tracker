@@ -19,6 +19,8 @@ Trackora is a premium, mobile-first personal finance application and budget trac
 * **Biometric Lock (Fingerprint/FaceID)**: Enables passwordless authentication using the browser's native Web Authentication API (WebAuthn). Users can toggle this option under Settings. When enabled, a fingerprint icon appears on the lock screen keypad to unlock the dashboard instantly without entering the PIN. WebAuthn operates entirely in a secure enclave, verifying user credentials locally on the device (requires a secure HTTPS or localhost context, and degrades gracefully by hiding when WebAuthn is unavailable or the connection is unsecure).
 * **Identity Verification (PIN Recovery)**: Custom security question and answer verification to reset forgotten PINs.
 * **Profile Deletion Security**: Replaces raw browser alerts with a dedicated PIN verification screen to cascade-delete profiles securely.
+* **Device-Local Profile Privacy**: Isolates profile lists across different physical devices. The app caches active profile credentials locally (`trackora_local_profiles` in `localStorage`), so only profiles that have signed up or logged in on that specific device are displayed in the profile list. Other backend accounts remain hidden for privacy.
+
 
 
 ### 📊 Interactive Analytics & Charts
