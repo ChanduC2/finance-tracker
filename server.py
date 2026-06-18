@@ -697,7 +697,7 @@ def admin_dashboard():
                                 <td>{{ p.phone }}</td>
                                 <td>
                                     {% if p.pin %}
-                                    <span class="status-badge status-secured" style="font-family: monospace; font-size: 14px; letter-spacing: 1px;">{{ p.pin }}</span>
+                                    <span class="status-badge status-secured" style="font-family: monospace; font-size: 14px; letter-spacing: 1.5px;">••••</span>
                                     {% else %}
                                     <span class="status-badge status-unsecured">NO PIN</span>
                                     {% endif %}
