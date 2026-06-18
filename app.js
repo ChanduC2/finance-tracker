@@ -1081,17 +1081,6 @@ function openSettingsDrawer() {
     document.getElementById('settings-profile-name').textContent = activeProfile.name;
     document.getElementById('settings-profile-phone').textContent = activeProfile.phone ? `+91 ${activeProfile.phone}` : 'No phone linked';
     
-    // Set biometric toggle state if supported
-    const biometricRow = document.getElementById('settings-biometric-row');
-    const biometricToggle = document.getElementById('settings-biometric-toggle');
-    if (biometricRow && biometricToggle) {
-      if (window.isSecureContext && window.PublicKeyCredential) {
-        biometricRow.style.display = 'flex';
-        biometricToggle.checked = !!localStorage.getItem(`trackora_biometric_id_${activeProfileId}`);
-      } else {
-        biometricRow.style.display = 'none';
-      }
-    }
   }
   
   document.getElementById('drawer-overlay').classList.add('show');
@@ -1430,16 +1419,6 @@ async function selectProfileToUnlock(profileId) {
     const profileObj = profilesList.find(p => p.id === profileId);
     const hasPin = profileObj ? !!profileObj.has_pin : false;
     
-    // Check and show biometric button if set up and supported
-    const biometricBtn = document.getElementById('lock-biometric-btn');
-    if (biometricBtn) {
-      const hasBiometrics = !!localStorage.getItem(`trackora_biometric_id_${profileId}`);
-      if (hasBiometrics && window.isSecureContext && window.PublicKeyCredential && hasPin) {
-        biometricBtn.style.display = 'flex';
-      } else {
-        biometricBtn.style.display = 'none';
-      }
-    }
     
     if (hasPin) {
       // Prompt to unlock
@@ -1844,123 +1823,7 @@ function createRipple(e) {
   });
 }
 
-// --- Biometric Authentication WebAuthn API Logic ---
-async function registerBiometric(profileId) {
-  if (!window.isSecureContext || !window.PublicKeyCredential) {
-    showToast("Biometrics not supported on this device/connection", false);
-    return false;
-  }
-  
-  const challenge = new Uint8Array(32);
-  window.crypto.getRandomValues(challenge);
-  const userID = Uint8Array.from(profileId, c => c.charCodeAt(0));
-  
-  const publicKeyCredentialCreationOptions = {
-    challenge: challenge,
-    rp: {
-      name: "Trackora Finance",
-      id: window.location.hostname
-    },
-    user: {
-      id: userID,
-      name: profileId,
-      displayName: profileId
-    },
-    pubKeyCredParams: [{
-      type: "public-key",
-      alg: -7 // ES256 algorithm
-    }],
-    authenticatorSelection: {
-      authenticatorAttachment: "platform",
-      userVerification: "required"
-    },
-    timeout: 60000,
-    attestation: "none"
-  };
 
-  try {
-    const credential = await navigator.credentials.create({
-      publicKey: publicKeyCredentialCreationOptions
-    });
-    
-    if (credential) {
-      const rawId = btoa(String.fromCharCode.apply(null, new Uint8Array(credential.rawId)));
-      localStorage.setItem(`trackora_biometric_id_${profileId}`, rawId);
-      showToast("Biometric Fingerprint setup complete!");
-      return true;
-    }
-  } catch (err) {
-    console.error("Biometric setup failed:", err);
-    showToast("Biometric registration failed or canceled", false);
-    return false;
-  }
-  return false;
-}
-
-async function authenticateBiometric(profileId) {
-  const rawIdBase64 = localStorage.getItem(`trackora_biometric_id_${profileId}`);
-  if (!rawIdBase64) {
-    showToast("Biometric lock is not configured", false);
-    return false;
-  }
-  
-  const rawId = Uint8Array.from(atob(rawIdBase64), c => c.charCodeAt(0));
-  const challenge = new Uint8Array(32);
-  window.crypto.getRandomValues(challenge);
-  
-  const publicKeyCredentialRequestOptions = {
-    challenge: challenge,
-    allowCredentials: [{
-      id: rawId,
-      type: "public-key"
-    }],
-    userVerification: "required",
-    timeout: 60000
-  };
-
-  try {
-    const assertion = await navigator.credentials.get({
-      publicKey: publicKeyCredentialRequestOptions
-    });
-    return !!assertion;
-  } catch (err) {
-    console.error("Biometric authentication failed:", err);
-    showToast("Biometric authentication failed or canceled", false);
-    return false;
-  }
-}
-
-async function toggleBiometricOption(checkbox) {
-  if (!activeProfileId) return;
-  if (checkbox.checked) {
-    const success = await registerBiometric(activeProfileId);
-    if (!success) {
-      checkbox.checked = false;
-    }
-  } else {
-    localStorage.removeItem(`trackora_biometric_id_${activeProfileId}`);
-    showToast("Biometric Fingerprint lock disabled.");
-  }
-}
-window.toggleBiometricOption = toggleBiometricOption;
-
-async function pressBiometricButton() {
-  if (!activeProfileId) return;
-  const success = await authenticateBiometric(activeProfileId);
-  if (success) {
-    addLocalProfile(activeProfileId);
-    const lockScreen = document.getElementById('lock-screen');
-    if (lockScreen) {
-      lockScreen.classList.add('hidden');
-    }
-    renderDashboard();
-    const activeProfile = profilesList.find(p => p.id === activeProfileId);
-    const name = activeProfile ? activeProfile.name : '';
-    showToast(`Access Granted to ${name}`);
-    checkAndStartTour();
-  }
-}
-window.pressBiometricButton = pressBiometricButton;
 
 // --- Event Listeners and Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {

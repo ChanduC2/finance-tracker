@@ -108,13 +108,9 @@
             <button type="button" class="keypad-btn" onclick="pressLockKey('7')">7</button>
             <button type="button" class="keypad-btn" onclick="pressLockKey('8')">8</button>
             <button type="button" class="keypad-btn" onclick="pressLockKey('9')">9</button>
-            <button type="button" class="keypad-btn action" id="lock-biometric-btn" onclick="pressBiometricButton()" title="Unlock with Fingerprint/FaceID" style="display: none;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 0-1.99.2"/><path d="M18 12a6 6 0 0 0-6-6"/><path d="M14 12a2 2 0 0 0-2-2"/><path d="M2 12a10 10 0 0 0 13.91 9.2"/><path d="M12 18a6 6 0 0 0 4.24-10.24"/><path d="M12 14a2 2 0 0 0 1.41-3.41"/><path d="M12 6a6 6 0 0 0-4.24 10.24"/><path d="M12 10a2 2 0 0 0-1.41 3.41"/><path d="M22 12a10 10 0 0 0-13.91-9.2"/></svg>
-            </button>
-            <button type="button" class="keypad-btn" onclick="pressLockKey('0')">0</button>
             <button type="button" class="keypad-btn action" onclick="pressLockKey('clear')">⌫</button>
-            <!-- Hidden dummy to maintain js compatibility -->
-            <button type="button" id="lock-ok-btn" style="display: none;"></button>
+            <button type="button" class="keypad-btn" onclick="pressLockKey('0')">0</button>
+            <button type="button" class="keypad-btn action" id="lock-ok-btn" onclick="pressLockKey('ok')">OK</button>
           </div>
           
           <button type="button" id="lock-forgot-btn" class="forgot-pin-link" onclick="showResetPinView()" style="background: transparent; border: none; color: var(--color-text-secondary); font-size: 12px; font-weight: 600; margin-top: 16px; margin-bottom: 8px; cursor: pointer; text-decoration: underline; transition: color 0.2s;">
@@ -580,16 +576,7 @@
           <div class="settings-list-group" style="display: flex; flex-direction: column; gap: 8px;">
             <span class="form-label" style="font-size: 9px; margin-bottom: 2px;">Preferences & Data</span>
 
-            <div class="settings-action-item" id="settings-biometric-row" style="display: none; justify-content: space-between; align-items: center;">
-              <div class="settings-action-label">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M12 2a10 10 0 0 0-1.99.2"/><path d="M18 12a6 6 0 0 0-6-6"/><path d="M14 12a2 2 0 0 0-2-2"/><path d="M2 12a10 10 0 0 0 13.91 9.2"/><path d="M12 18a6 6 0 0 0 4.24-10.24"/><path d="M12 14a2 2 0 0 0 1.41-3.41"/><path d="M12 6a6 6 0 0 0-4.24 10.24"/><path d="M12 10a2 2 0 0 0-1.41 3.41"/><path d="M22 12a10 10 0 0 0-13.91-9.2"/></svg>
-                Fingerprint Lock
-              </div>
-              <label class="switch-toggle" style="position: relative; display: inline-block; width: 34px; height: 20px; flex-shrink: 0; margin-left: 10px;">
-                <input type="checkbox" id="settings-biometric-toggle" onchange="toggleBiometricOption(this)" style="opacity: 0; width: 0; height: 0;">
-                <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.08); transition: .4s; border-radius: 20px; border: 1px solid var(--border-color);"></span>
-              </label>
-            </div>
+
 
             <div class="settings-action-item" onclick="handleSettingsResetData()">
               <div class="settings-action-label">

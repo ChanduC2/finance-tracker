@@ -2187,38 +2187,3 @@ body.theme-light .auth-tabs {
   }
 }
 
-/* Custom Switch Toggle Switch Styles */
-.toggle-slider::before {
-  content: "";
-  position: absolute;
-  height: 14px;
-  width: 14px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-}
-
-.switch-toggle input:checked + .toggle-slider {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  box-shadow: 0 0 6px var(--color-primary-glow);
-}
-
-.switch-toggle input:checked + .toggle-slider::before {
-  transform: translateX(14px);
-}
-
-/* Biometric Keypad Button SVG centering & micro-animation */
-.keypad-btn svg {
-  display: block;
-  margin: 0 auto;
-  color: var(--color-text-primary);
-  transition: transform 0.1s ease;
-}
-
-.keypad-btn:active svg {
-  transform: scale(0.85);
-}
