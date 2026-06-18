@@ -86,6 +86,40 @@ const storage = {
   }
 };
 
+// --- Local profiles tracking on device ---
+function getLocalProfiles() {
+  try {
+    const local = localStorage.getItem('trackora_local_profiles');
+    return local ? JSON.parse(local) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function addLocalProfile(profileId) {
+  if (!profileId) return;
+  const local = getLocalProfiles();
+  if (!local.includes(profileId)) {
+    local.push(profileId);
+    try {
+      localStorage.setItem('trackora_local_profiles', JSON.stringify(local));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+}
+
+function removeLocalProfile(profileId) {
+  if (!profileId) return;
+  let local = getLocalProfiles();
+  local = local.filter(id => id !== profileId);
+  try {
+    localStorage.setItem('trackora_local_profiles', JSON.stringify(local));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 // --- // --- Profile List Load / Save ---
 async function loadProfiles() {
   try {
@@ -99,6 +133,10 @@ async function loadProfiles() {
   
   // Local session cache for active user identification
   activeProfileId = localStorage.getItem('apex_active_profile_id') || '';
+  
+  if (activeProfileId) {
+    addLocalProfile(activeProfileId);
+  }
 }
 
 function saveProfiles() {
@@ -226,7 +264,10 @@ function renderProfilesList() {
   if (!container) return;
   container.innerHTML = '';
   
-  profilesList.forEach(p => {
+  const localProfileIds = getLocalProfiles();
+  const localProfiles = profilesList.filter(p => localProfileIds.includes(p.id));
+  
+  localProfiles.forEach(p => {
     const isActive = p.id === activeProfileId;
     const initials = p.name
       .split(' ')
@@ -283,6 +324,7 @@ async function createNewProfile(name, email, phone, securityQuestion, securityAn
     
     if (res.ok) {
       const newProfile = await res.json();
+      addLocalProfile(newProfile.id);
       await loadProfiles();
       activeProfileId = newProfile.id;
       saveProfiles();
@@ -1581,6 +1623,7 @@ function pressLockKey(key) {
             body: JSON.stringify({ profile_id: activeProfileId, pin: enteredPinCode })
           });
           if (res.ok) {
+            addLocalProfile(activeProfileId);
             lockScreen.classList.add('hidden');
             renderDashboard();
             showToast(`Access Granted to ${name}`);
@@ -1612,7 +1655,7 @@ function pressLockKey(key) {
               const resDelete = await fetch(`/api/profile/${activeProfileId}`, { method: 'DELETE' });
               if (resDelete.ok) {
                 showToast(`Deleted profile "${name}"`);
-                
+                removeLocalProfile(activeProfileId);
                 await loadProfiles();
                 if (profilesList.length === 0) {
                   activeProfileId = '';
@@ -1905,6 +1948,7 @@ async function pressBiometricButton() {
   if (!activeProfileId) return;
   const success = await authenticateBiometric(activeProfileId);
   if (success) {
+    addLocalProfile(activeProfileId);
     const lockScreen = document.getElementById('lock-screen');
     if (lockScreen) {
       lockScreen.classList.add('hidden');
@@ -1965,7 +2009,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderDashboard();
 
   // Screen lock initialization
-  if (activeProfileId && profilesList.some(p => p.id === activeProfileId)) {
+  const localProfileIds = getLocalProfiles();
+  if (activeProfileId && localProfileIds.includes(activeProfileId) && profilesList.some(p => p.id === activeProfileId)) {
     await selectProfileToUnlock(activeProfileId);
   } else {
     initLockScreen();
@@ -1988,6 +2033,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (res.ok) {
             const matched = await res.json();
             // Refresh local profiles list to sync any server changes
+            addLocalProfile(matched.id);
             await loadProfiles();
             await selectProfileToUnlock(matched.id);
             showToast(`Account found: ${matched.name}. Loading...`);
