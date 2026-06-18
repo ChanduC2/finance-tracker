@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 import sqlite3
 import os
 import uuid
@@ -448,6 +448,363 @@ def delete_profile(profile_id):
         conn.rollback()
         conn.close()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/admin')
+def admin_dashboard():
+    # Passcode authentication (default is 'trackora-admin', can be set via env var ADMIN_KEY)
+    secret_key = os.environ.get('ADMIN_KEY', 'trackora-admin')
+    user_key = request.args.get('key')
+    
+    if not user_key or user_key != secret_key:
+        return "<h1>403 Forbidden</h1><p>Invalid or missing access key.</p>", 403
+        
+    conn = get_db_connection()
+    
+    # Get statistics
+    total_profiles = conn.execute("SELECT COUNT(*) FROM profiles").fetchone()[0]
+    total_transactions = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
+    total_volume = conn.execute("SELECT SUM(amount) FROM transactions").fetchone()[0] or 0.0
+    
+    # Get all profiles
+    profiles_rows = conn.execute("""
+        SELECT p.id, p.name, p.email, p.phone, p.color, (p.pin IS NOT NULL) as has_pin,
+               (SELECT COUNT(*) FROM transactions t WHERE t.profile_id = p.id) as tx_count,
+               (SELECT SUM(amount) FROM transactions t WHERE t.profile_id = p.id) as total_spent
+        FROM profiles p
+    """).fetchall()
+    
+    # Get recent transactions (last 100)
+    tx_rows = conn.execute("""
+        SELECT t.id, t.profile_id, p.name as profile_name, t.type, t.category, t.amount, t.date, t.desc
+        FROM transactions t
+        JOIN profiles p ON t.profile_id = p.id
+        ORDER BY t.date DESC, t.id DESC
+        LIMIT 100
+    """).fetchall()
+    
+    conn.close()
+    
+    # Render premium HTML
+    html_template = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Trackora Admin Dashboard</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --bg-primary: #000000;
+                --bg-secondary: #0a0a0a;
+                --bg-card: #141414;
+                --border-color: #222222;
+                --color-text: #ffffff;
+                --color-text-muted: #888888;
+                --color-accent: #ffffff;
+                --color-danger: #ff4d4d;
+                --color-success: #00e676;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: 'Outfit', sans-serif;
+                background-color: var(--bg-primary);
+                color: var(--color-text);
+                line-height: 1.5;
+                padding: 40px 20px;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+            header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 24px;
+                margin-bottom: 32px;
+            }
+            h1 {
+                font-size: 28px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+            }
+            .badge-live {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                background-color: rgba(0, 230, 118, 0.1);
+                color: var(--color-success);
+                padding: 6px 12px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 600;
+                text-transform: uppercase;
+                border: 1px solid rgba(0, 230, 118, 0.2);
+            }
+            .badge-live::before {
+                content: '';
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                background-color: var(--color-success);
+                border-radius: 50%;
+                animation: pulse 1.5s infinite;
+            }
+            @keyframes pulse {
+                0% { opacity: 0.4; }
+                50% { opacity: 1; }
+                100% { opacity: 0.4; }
+            }
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+                margin-bottom: 40px;
+            }
+            .stat-card {
+                background-color: var(--bg-card);
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                padding: 24px;
+            }
+            .stat-card .label {
+                font-size: 14px;
+                color: var(--color-text-muted);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 8px;
+            }
+            .stat-card .value {
+                font-size: 36px;
+                font-weight: 800;
+            }
+            .section-title {
+                font-size: 20px;
+                font-weight: 600;
+                margin-bottom: 20px;
+                letter-spacing: 1px;
+                border-left: 3px solid var(--color-accent);
+                padding-left: 12px;
+            }
+            .card {
+                background-color: var(--bg-card);
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                overflow: hidden;
+                margin-bottom: 40px;
+            }
+            .table-container {
+                overflow-x: auto;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                text-align: left;
+                font-size: 15px;
+            }
+            th, td {
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border-color);
+            }
+            th {
+                background-color: var(--bg-secondary);
+                color: var(--color-text-muted);
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 13px;
+                letter-spacing: 1px;
+            }
+            tr:last-child td {
+                border-bottom: none;
+            }
+            tr:hover td {
+                background-color: rgba(255, 255, 255, 0.02);
+            }
+            .profile-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .profile-dot {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+            }
+            .status-badge {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .status-secured {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: var(--color-text);
+                border: 1px solid var(--border-color);
+            }
+            .status-unsecured {
+                background-color: rgba(255, 77, 77, 0.1);
+                color: var(--color-danger);
+                border: 1px solid rgba(255, 77, 77, 0.2);
+            }
+            .amount-val {
+                font-family: monospace;
+                font-weight: bold;
+                font-size: 16px;
+            }
+            .amount-income {
+                color: var(--color-success);
+            }
+            .amount-expense {
+                color: var(--color-danger);
+            }
+            .text-muted {
+                color: var(--color-text-muted);
+            }
+            @media (max-width: 768px) {
+                body {
+                    padding: 20px 10px;
+                }
+                header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 12px;
+                }
+                h1 {
+                    font-size: 22px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <div>
+                    <h1>Trackora Admin</h1>
+                    <p class="text-muted">Live system & database manager</p>
+                </div>
+                <div class="badge-live">Live Database</div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">Total Profiles</div>
+                    <div class="value">{{ total_profiles }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Transactions</div>
+                    <div class="value">{{ total_transactions }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total System Volume</div>
+                    <div class="value">₹{{ "{:,.2f}".format(total_volume) }}</div>
+                </div>
+            </div>
+
+            <h2 class="section-title">Registered User Profiles</h2>
+            <div class="card">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>ID</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Security PIN</th>
+                                <th>Transactions</th>
+                                <th>Total Volume</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in profiles %}
+                            <tr>
+                                <td>
+                                    <div class="profile-badge">
+                                        <div class="profile-dot" style="background-color: {{ p.color }}"></div>
+                                        <strong>{{ p.name }}</strong>
+                                    </div>
+                                </td>
+                                <td class="text-muted" style="font-family: monospace;">{{ p.id }}</td>
+                                <td>{{ p.email }}</td>
+                                <td>{{ p.phone }}</td>
+                                <td>
+                                    {% if p.has_pin %}
+                                    <span class="status-badge status-secured">SECURED</span>
+                                    {% else %}
+                                    <span class="status-badge status-unsecured">NO PIN</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ p.tx_count }}</td>
+                                <td>₹{{ "{:,.2f}".format(p.total_spent or 0.0) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <h2 class="section-title">Recent System Transactions (Last 100)</h2>
+            <div class="card">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>User</th>
+                                <th>Type</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Description</th>
+                                <th>Transaction ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in txs %}
+                            <tr>
+                                <td>{{ t.date }}</td>
+                                <td><strong>{{ t.profile_name }}</strong></td>
+                                <td>
+                                    {% if t.type == 'income' %}
+                                    <span class="status-badge status-secured" style="color: var(--color-success)">INCOME</span>
+                                    {% else %}
+                                    <span class="status-badge status-unsecured" style="color: var(--color-danger)">EXPENSE</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ t.category }}</td>
+                                <td>
+                                    <span class="amount-val {% if t.type == 'income' %}amount-income{% else %}amount-expense{% endif %}">
+                                        {% if t.type == 'income' %}+{% else %}-{% endif %}₹{{ "{:,.2f}".format(t.amount) }}
+                                    </span>
+                                </td>
+                                <td class="text-muted">{{ t.desc or '-' }}</td>
+                                <td class="text-muted" style="font-family: monospace; font-size: 13px;">{{ t.id }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return render_template_string(
+        html_template, 
+        total_profiles=total_profiles, 
+        total_transactions=total_transactions, 
+        total_volume=total_volume,
+        profiles=profiles_rows,
+        txs=tx_rows
+    )
 
 if __name__ == '__main__':
     # Run server on port 5000 listening on all network interfaces
